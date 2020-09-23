@@ -35,7 +35,12 @@ public class GameEngine{
                 }else if("name".equals(param.first)){
                     c.setName((String)param.second);
                 }else if("type".equals(param.first)){
-                    c.setType(TYPE.valueOf((String)param.second));
+                    if(Charactor.s_specifyTbl.containsKey(param.second)){
+                        c=(Charactor)Charactor.s_specifyTbl.get(param.second).clone();
+
+                    }else{
+                        c.setType(TYPE.valueOf((String)param.second));
+                    }
                 }else if("item".equals(param.first.substring(0,param.first.length()-1))){
                     int idx=Integer.valueOf(param.first.substring(param.first.length()-1));
                     String name=(String)param.second;
@@ -66,19 +71,41 @@ public class GameEngine{
         }
     };
 
+    private static LispVM.NativeMethodType s_task=new LispVM.NativeMethodType(){
+    
+        @Override
+        public int call(LispVM vm, int argNum, Stack<Object> o) {
+            Logger.getGlobal().info(String.format("Begin %s argNum=%d",this.toString(),argNum));
+            ShootingState.Task task=new ShootingState.Task();
+            for(int i=0;i < argNum;++i){
+                Pair<String,Object> a=(Pair<String,Object>)o.pop();
+                if("chara".equals(a.first)){
+                    Logger.getGlobal().info(String.format("Parameter chara found %s",a.toString()));
+                    for(Charactor c:s_charaList){                
+                        if(c.getName().equals(a.second)){
+                            task.obj=c;
+                            break;
+                        }
+                    }
+                }else if("num".equals(a.first)){
+                    task.num=(int)(((Float)a.second).floatValue());
+                }else if("levelUp".equals(a.first)){
+                    task.numNeedToNextLevel=(int)(((Float)a.second).floatValue());
+                }
+            }
+            o.push(task);
+            Logger.getGlobal().info("End "+this.toString());
+            return 1;
+        }
+    };
     private static LispVM.NativeMethodType s_sTaskList=new LispVM.NativeMethodType(){
     
         @Override
         public int call(LispVM vm, int argNum, Stack<Object> o) {
             ArrayList<ShootingState.Task> taskList=new ArrayList<ShootingState.Task>();
             for(int i=0;i < argNum-1;++i){
-                Pair<String,Object> a=(Pair<String,Object>)o.pop();
-                for(Charactor c:s_charaList){                
-                    if(c.getName().equals(a.first)){
-                        taskList.add(new ShootingState.Task(c,(int)(float)((Float)a.second)));
-                        break;
-                    }
-                }
+                ShootingState.Task t=(ShootingState.Task)o.pop();
+                taskList.add(t);
             }
             String name=(String)o.pop();
             s_shootingTaskList.put(name,taskList.toArray());
@@ -188,7 +215,9 @@ public class GameEngine{
             LispVM vm=new LispVM();
             vm.reg("chara", s_charaFunc);
             vm.reg("pair",s_pair);
+            vm.reg("task", s_task);
             vm.reg("sTaskL",s_sTaskList);
+
             vm.reg("item",s_itemFunc);
             return vm;
     }
@@ -200,6 +229,7 @@ public class GameEngine{
         LispVM vm=createVMState();
         try{
             new LispSyntaxParser(vm, new LispLexerParser(src));
+            System.out.println();
             vm.dump();
             vm.run();
 

@@ -1,8 +1,10 @@
 
 package assets;
 import java.awt.*;
+import java.util.*;
 import config.Config;
 import states.*;
+
 /**
  * キャラクタークラス
  */
@@ -28,6 +30,8 @@ public class Charactor implements IMove,Cloneable{
     private ItemSlot[] m_itemSlots=new ItemSlot[Config.ITEM_SLOT_NUM];
     private int m_count=0;
     private boolean m_doHitCheck=true;
+
+    public static HashMap<String,Charactor> s_specifyTbl=new HashMap<>();
     public Charactor(){}
     private Charactor(Charactor c){
         this.m_name=c.m_name;
@@ -127,6 +131,9 @@ public class Charactor implements IMove,Cloneable{
         return new Charactor(this);
 
     }
+    public Object clone(Charactor c){
+        return new Charactor(c);
+    }
 
     public void move(IState s){
         if(0==m_count){
@@ -145,7 +152,8 @@ public class Charactor implements IMove,Cloneable{
                         if(Item.TYPE.CANNON== item.getType()){
                             Vector v=Vector.sub(ss.getPlayerPos(), getPos());
                             v=Vector.mul(Vector.normalize(v),Config.BULLET_MOVE_SPEED);
-                            ss.addBullet(getPos(), v, itemSlot.item.getAtk());
+
+                            ss.addBullet(getPos(), v, itemSlot.item.getAtk()+getAtk());
                         }
 
                         itemSlot.prevUsed=ss.getCurTime();

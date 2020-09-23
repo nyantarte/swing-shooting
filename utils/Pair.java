@@ -9,4 +9,9 @@ public class Pair<F,S> {
         second=s;
     }
     public Pair(){}
+
+    @Override
+    public String toString(){
+        return String.format("Pair first=%s second=%s",first.toString(),second.toString());
+    }
 }

@@ -67,4 +67,8 @@ public class Bullet implements IMove{
         return new Bullet();
     }
 
+    @Override
+    public String toString(){
+        return "bullet";
+    }
 }

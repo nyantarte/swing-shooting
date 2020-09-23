@@ -2,6 +2,7 @@ package states;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 
 import config.*;
 import game.GameEngine;
@@ -11,7 +12,8 @@ public class ShootingState implements IState{
     public static class Task{
         public IMove obj;
         public int num;
-
+        public int numNeedToNextLevel;
+        public Task(){}
         public Task(IMove m,int n){
             obj=m;
             num=n;
@@ -29,6 +31,7 @@ public class ShootingState implements IState{
     private int m_gameLevel=0;
     private int m_objInserted=0;
     private long m_curTime;
+    private int m_playerBeated=0;
     public ShootingState(Object[] tl){
         m_playerChara=GameEngine.getPlayerUseChara();
         m_playerChara.setPos(new Vector(Config.DEF_CHARA_SIZE,Config.MAIN_WIN_H/2,0));
@@ -48,8 +51,13 @@ public class ShootingState implements IState{
     }
     public void onTimer(UISurface s){
         m_curTime=System.currentTimeMillis();
+        if(0>=m_playerChara.getLife()){
+            GameEngine.popState();;
+            GameEngine.setState(new GameOverState(false));
+            return;
+        }
         /**
-         * オブジェクトの移動及び開放処理
+         * オブジェクトの移動及び解放処理
          * 
          */
         for(int i=0;i < m_objList.size();++i){
@@ -59,7 +67,9 @@ public class ShootingState implements IState{
                 //画面外か？
                 if(0>=pos.getX() || 0>=m.getLife()){
                     m_objList.set(i, null);
-
+                    if(m instanceof Charactor && 0>=m.getLife()){
+                        ++m_playerBeated;
+                    }
                 }else{
                     float objHitSize=0.0f;
                     //移動
@@ -70,8 +80,12 @@ public class ShootingState implements IState{
                     }
                     if(m.doHitCheck()){
                         if(Vector.isCollide(pos, objHitSize, m_playerChara.getPos(),Config.CHARA_HIT_CHECK_SIZE)){
+                            Logger.getGlobal().info("Begin hit task");
+                            System.out.println(String.format("Attacker %s atk=%d",m.toString(),m.getAtk()));
                             m.setDoHitCheck(false);
                             m_playerChara.onHit(m.getAtk());
+                            Logger.getGlobal().info(String.format("Defender %s life=%d",m_playerChara.toString(),m_playerChara.getLife()));
+                            Logger.getGlobal().info("End hit task");
                         }
                     }
                     if(m.doHitCheck() && null!=m_playerBullet){
@@ -91,6 +105,17 @@ public class ShootingState implements IState{
         if(0>=m_fieldGenCount){
             
             Task t=(Task)m_taskList[m_gameLevel];
+            if(t.numNeedToNextLevel==m_playerBeated){
+                ++m_gameLevel;
+            }
+            if(m_taskList.length<=m_gameLevel){
+                GameEngine.popState();;
+                GameEngine.setState(new GameOverState(true));
+                return;
+    
+            }else{
+                t=(Task)m_taskList[m_gameLevel];
+            }
             //オブジェクトは複数個生成を指定できる
             //ただし、１フレーム内に生成できる数は１個のみ
             if(m_objInserted< t.num){   //全て生成済？
